@@ -32,7 +32,7 @@ str(df$smoking_status)
 #New Variable BMI
 df_new <- df %>%
   dplyr::select(sex, weight, height, age, smoking_status, LDL_chole, HDL_chole, SBP, DRK_YN) %>%
-  mutate(BMI=(weight/(height)**2)*10000)
+  mutate(BMI=(weight/(height)**2)*10000) #height in m therefore multiplication with 10000
 
 head(df_new)
 
@@ -182,13 +182,13 @@ table(df_new$DRK_YN)
 
 #check for linearity
 qqnorm(df_new$LDL_chole) #one extreme outlier detected
-df_new %>% filter(LDL_chole > 3000)
+df_new %>% filter(LDL_chole > 1000) #values above 1000mg/dl extremely unlikely
 max(df_new$LDL_chole)
 
 qqnorm(df_new$HDL_chole) #one extreme outlier detected
-df_new %>% filter(HDL_chole > 4000)
+df_new %>% filter(HDL_chole > 500) #values above 500mg/dl extremely unlikely
 
-df_new_h3 <- df_new %>% filter(LDL_chole < 5000) %>% filter(HDL_chole < 5000)
+df_new_h3 <- df_new %>% filter(LDL_chole < 1000) %>% filter(HDL_chole < 500)
 #One extreme LDL cholesterol value (maximum observed) was excluded for h3
 
 qqnorm(df_new_h3$LDL_chole)
@@ -221,11 +221,12 @@ model_h3_HDL <- lm(HDL_chole ~ age + sex + DRK_YN + smoking_status, data=df_new_
 vif(model_h3_HDL)
 #VIF <5 therefore no multicollinearity
 
-#check linearity of residuals
+#check normal distribution of residuals
 plot(density(rstandard(model_h3_LDL))) 
 plot(density(rstandard(model_h3_HDL)))
-#shows normal distribution with some outliers
+#shows normal distribution of residuals
 
-#Given the large sample size (n=991345), formal tests of multivariate normality were not calculated, 
+
+#Given the large sample size (n=991299), formal tests of multivariate normality were not calculated, 
 #as even trivial deviations lead to statistical significance. Visual inspection of Q–Q plots and 
 #residual distributions indicated no severe violations relevant for the MANCOVA.
