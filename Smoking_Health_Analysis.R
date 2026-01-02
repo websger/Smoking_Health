@@ -93,8 +93,7 @@ table(df_new$smoking_status)
 table(df_new$sex)
 
 #Linearity of regression
-df_new$smoking_status <- ordered(
-  df_new$smoking_status,
+df_new$smoking_status <- ordered(df_new$smoking_status,
   levels = c("never smoked",
     "former smoker",
     "current smoker"))
@@ -104,12 +103,12 @@ df_new$age_con <- scale(df_new$age, center = TRUE, scale = TRUE) # centered age:
 # Fit linear ordinal model (standard)
 model_lin_h1 <- clm(smoking_status ~ age_con + sex,
                  data = df_new,
-                 control = clm.control(gradTol = 1e-3, maxIter = 1000))
+                 control = clm.control(gradTol = 0.001))
 
 # Fit model with natural spline for age_con (df = 3)
 model_spline_h1 <- clm(smoking_status ~ ns(age_con, df = 3) + sex,
                     data = df_new,
-                    control = clm.control(gradTol = 1e-3, maxIter = 1000))
+                    control = clm.control(gradTol = 0.001))
 
 # Likelihood ratio test to check linearity
 lrtest(model_lin_h1, model_spline_h1)
@@ -117,12 +116,51 @@ lrtest(model_lin_h1, model_spline_h1)
 
 # Check proportional-odds assumption
 nominal_test(model_spline_h1)
-# No significant results - therefore proportional-odds assumption holds
+# No significant results - therefore proportional-odds assumption holds. Analysis is feasible. 
 
 # Final model for interpretation
 summary(model_spline_h1)
-# Interpretation: Coefficients show the effect of age_con (spline) on the log-odds of being in
-# a higher smoking category, accounting for the proportional-odds assumption.
+# Interpretation: Coefficients show the effect of age_con (spline) on the log-odds of being in a higher smoking category, accounting for the proportional-odds assumption.
 
 
 #Pre-Analysis H2:
+#Library
+library(hexbin)
+library(car)
+
+#Viewing variables
+hist(df_new$weight)
+mean(df_new$weight)
+H2_set <- df_new %>% group_by(smoking_status) %>% 
+  summarise(mean(weight), sd(weight), mean(age))
+
+#normal distribution
+qqnorm(df_new$weight)
+qqline(df_new$weight)
+#weight looks normally distributed within
+
+#cheack for linearity
+model_h2 <- lm(weight ~ age + sex + smoking_status, data = df_new)
+
+bin_h2 <- hexbin(model_h2$fitted.values, resid(model_h2), xbins = 50)
+
+plot(bin_h2,
+     colramp = colorRampPalette(c("grey","blue"))) #two clouds because of sex separation
+
+#homoscedasticity
+df_res <- data.frame(fit = model_h2$fitted.values, resid = resid(model_h2))
+
+ggplot(df_res, aes(x = fit, y = resid)) +
+  geom_hex(bins = 50) +
+  scale_fill_gradient(low = "grey", high = "blue") +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Fitted (Hexbin)") #two clouds because of sex separation in model_h2
+#clouds have no specific shape. homoscedasticity is satisfied - width of cloud is stable
+
+#normality of residuals
+qqnorm(resid(model_h2))
+qqline(resid(model_h2))
+
+#multicollinearity
+vif(model_h2)
+#all values <5, therefore no multicollinearity
