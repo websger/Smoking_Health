@@ -98,7 +98,8 @@ df_new$smoking_status <- ordered(df_new$smoking_status,
     "former smoker",
     "current smoker"))
 
-df_new$age_con <- scale(df_new$age, center = TRUE, scale = TRUE) # centered age: subtract mean age from each value
+df_new$age_con <- scale(df_new$age, center = TRUE, scale = TRUE) 
+# centered age: subtract mean age from each value
 
 # Fit linear ordinal model (standard)
 model_lin_h1 <- clm(smoking_status ~ age_con + sex,
@@ -120,10 +121,11 @@ nominal_test(model_spline_h1)
 
 # Final model for interpretation
 summary(model_spline_h1)
-# Interpretation: Coefficients show the effect of age_con (spline) on the log-odds of being in a higher smoking category, accounting for the proportional-odds assumption.
+# Interpretation: Coefficients show the effect of age_con (spline) on the log-odds of being in a 
+#higher smoking category, accounting for the proportional-odds assumption.
 
 
-#Pre-Analysis H2:
+#Pre-Analysis H2: weight decreases with smoking status. covariates: age, sex
 #Library
 library(hexbin)
 library(car)
@@ -137,9 +139,9 @@ H2_set <- df_new %>% group_by(smoking_status) %>%
 #normal distribution
 qqnorm(df_new$weight)
 qqline(df_new$weight)
-#weight looks normally distributed within
+#"weight" looks normally distributed within
 
-#cheack for linearity
+#check for linearity
 model_h2 <- lm(weight ~ age + sex + smoking_status, data = df_new)
 
 bin_h2 <- hexbin(model_h2$fitted.values, resid(model_h2), xbins = 50)
@@ -165,3 +167,65 @@ plot(density(rstandard(model_h2))) #residuals normally distributed
 #multicollinearity
 vif(model_h2)
 #all values <5, therefore no multicollinearity
+
+
+#Pre-Analysis H3: smoking status predicts higher LDL and lower HDL. covariates: age, sex, alcohol consumption
+#Library
+library(tidyverse)
+library(MVN)
+
+#Viewing Variables
+H3_set <- df_new %>% group_by(smoking_status) %>% 
+  summarise(mean(LDL_chole), sd(LDL_chole), mean(HDL_chole), sd(HDL_chole), mean(age), sd(age))
+table(df_new$sex)
+table(df_new$DRK_YN)
+
+#check for linearity
+qqnorm(df_new$LDL_chole) #one extreme outlier detected
+df_new %>% filter(LDL_chole > 3000)
+max(df_new$LDL_chole)
+
+qqnorm(df_new$HDL_chole) #one extreme outlier detected
+df_new %>% filter(HDL_chole > 4000)
+
+df_new_h3 <- df_new %>% filter(LDL_chole < 5000) %>% filter(HDL_chole < 5000)
+#One extreme LDL cholesterol value (maximum observed) was excluded for h3
+
+qqnorm(df_new_h3$LDL_chole)
+qqline(df_new_h3$LDL_chole) #normal distribution visually acceptable
+qqnorm(df_new_h3$HDL_chole)
+qqline(df_new_h3$HDL_chole) #normal distribution visually acceptable
+
+ggplot(df_new, aes(age, LDL_chole)) +
+  geom_hex(bins = 50) +
+  scale_fill_gradient(
+    low = "grey",
+    high = "blue") +
+  geom_smooth(method = "lm", color = "red", linewidth = 1) +
+  labs(title = "linearity of Age & LDL-cholesterin")
+
+ggplot(df_new, aes(age, HDL_chole)) +
+  geom_hex(bins = 50) +
+  scale_fill_gradient(
+    low = "grey",
+    high = "blue") +
+  geom_smooth(method = "lm", color = "red", linewidth = 1) +
+  labs(title = "linearity of Age & HDL-cholesterin")
+
+#check for multicollinearity
+model_h3_LDL <- lm(LDL_chole ~ age + sex + DRK_YN + smoking_status, data=df_new_h3)
+vif(model_h3_LDL)
+#VIF <5 therefore no multicollinearity
+
+model_h3_HDL <- lm(HDL_chole ~ age + sex + DRK_YN + smoking_status, data=df_new_h3)
+vif(model_h3_HDL)
+#VIF <5 therefore no multicollinearity
+
+#check linearity of residuals
+plot(density(rstandard(model_h3_LDL))) 
+plot(density(rstandard(model_h3_HDL)))
+#shows normal distribution with some outliers
+
+#Given the large sample size (n=991345), formal tests of multivariate normality were not calculated, 
+#as even trivial deviations lead to statistical significance. Visual inspection of Q–Q plots and 
+#residual distributions indicated no severe violations relevant for the MANCOVA.
