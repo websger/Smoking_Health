@@ -160,6 +160,7 @@ ggplot(df_res, aes(x = fit, y = resid)) +
 #normality of residuals
 qqnorm(resid(model_h2))
 qqline(resid(model_h2))
+plot(density(rstandard(model_h2))) #residuals normally distributed
 
 #multicollinearity
 vif(model_h2)
