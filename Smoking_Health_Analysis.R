@@ -2,8 +2,18 @@
 #Set Seed
 set.seed(123)
 
+#Install packages
+install.packages("MASS")
+install.packages("ordinal")
+install.packages("ggeffects")
+install.packages("lmtest")
+install.packages("reshape")
+install.packages("tidyverse")
+install.packages("hexbin")
+install.packages("car")
+
 #Load Data
-library(readr)
+library(tidyverse)
 df <- read_csv("data_raw/smoking_driking_dataset_Ver01.csv")
 head(df)
 
@@ -24,7 +34,6 @@ df$SMK_stat_type_cd <- as.factor(df$SMK_stat_type_cd)
 str(df$SMK_stat_type_cd)
 
 #Rename smoking status
-library(dplyr)
 df <- df %>%
   rename(smoking_status=SMK_stat_type_cd)
 str(df$smoking_status)
@@ -60,9 +69,8 @@ unique(df_new$SBP)
 #write csv, save clean data for further analysis
 write_csv(df_new, "data_clean/Smoking_Health_clean.csv")
 
-#Pre-Analysis
+#Analysis of Hypotheses
 #Viewing all Variables
-library(ggplot2)
 
 table(df_new$sex)
 hist(df_new$height)
@@ -78,6 +86,7 @@ hist(df_new$BMI)
 min(df_new$LDL_chole)
 max(df_new$LDL_chole)
 
+#H1
 #Pre-Analysis H1: The likelihood of currently smoking decreases with increasing age. covariate: sex
 #Library
 library(MASS)      # polr()
@@ -99,32 +108,50 @@ df_new$smoking_status <- ordered(df_new$smoking_status,
     "current smoker"))
 
 df_new$age_con <- scale(df_new$age, center = TRUE, scale = TRUE) 
-# centered age: subtract mean age from each value
+#centered age: subtract mean age from each value
 
-# Fit linear ordinal model (standard)
+#effects of sex on smoking status
+age_smoking <- table(df_new$sex, df_new$smoking_status)
+df_age_smoking <- as.data.frame(age_smoking)
+head(df_age_smoking)
+df_age_smoking <- df_age_smoking %>% rename("sex"="Var1", "smoking_status"="Var2", "n"="Freq") 
+df_age_smoking <- df_age_smoking %>% mutate(smoking_percent = n/sum(n)*100)
+
+ggplot(df_age_smoking, aes(x = smoking_status, y=smoking_percent, fill=sex)) +
+  geom_col(position = "dodge") +
+  labs(
+    x = "Smoking status",
+    y = "Percent",
+    fill = "Sex"
+  ) +
+  theme_minimal()
+
+#Fit linear ordinal model (standard)
 model_lin_h1 <- clm(smoking_status ~ age_con + sex,
                  data = df_new,
                  control = clm.control(gradTol = 0.001))
 
-# Fit model with natural spline for age_con (df = 3)
+#Fit model with natural spline for age_con (df = 3)
 model_spline_h1 <- clm(smoking_status ~ ns(age_con, df = 3) + sex,
                     data = df_new,
                     control = clm.control(gradTol = 0.001))
 
-# Likelihood ratio test to check linearity
+#Likelihood ratio test to check linearity
 lrtest(model_lin_h1, model_spline_h1)
-# Interpretation: p < 0.05 → linearity assumption violated → spline model fits better
+#Interpretation: p < 0.05 → linearity assumption violated → spline model fits better
 
-# Check proportional-odds assumption
+#Check proportional-odds assumption
 nominal_test(model_spline_h1)
-# No significant results - therefore proportional-odds assumption holds. Analysis is feasible. 
+#No significant results - therefore proportional-odds assumption holds. Analysis is feasible. 
 
-# Final model for interpretation
+#Analysis of H1
+#Final model for interpretation
 summary(model_spline_h1)
-# Interpretation: Coefficients show the effect of age_con (spline) on the log-odds of being in a 
+#Interpretation: Coefficients show the effect of age_con (spline) on the log-odds of being in a 
 #higher smoking category, accounting for the proportional-odds assumption.
 
 
+#H2
 #Pre-Analysis H2: weight decreases with smoking status. covariates: age, sex
 #Library
 library(hexbin)
@@ -168,12 +195,11 @@ plot(density(rstandard(model_h2))) #residuals normally distributed
 vif(model_h2)
 #all values <5, therefore no multicollinearity
 
+#Analysis of H2
+summary(model_h2)
 
+#H3
 #Pre-Analysis H3: smoking status predicts higher LDL and lower HDL. covariates: age, sex, alcohol consumption
-#Library
-library(tidyverse)
-library(MVN)
-
 #Viewing Variables
 H3_set <- df_new %>% group_by(smoking_status) %>% 
   summarise(mean(LDL_chole), sd(LDL_chole), mean(HDL_chole), sd(HDL_chole), mean(age), sd(age))
@@ -226,7 +252,11 @@ plot(density(rstandard(model_h3_LDL)))
 plot(density(rstandard(model_h3_HDL)))
 #shows normal distribution of residuals
 
-
 #Given the large sample size (n=991299), formal tests of multivariate normality were not calculated, 
 #as even trivial deviations lead to statistical significance. Visual inspection of Q–Q plots and 
 #residual distributions indicated no severe violations relevant for the MANCOVA.
+
+#Analysis of H3
+summary(model_h3_HDL)
+summary(model_h3_LDL)
+
