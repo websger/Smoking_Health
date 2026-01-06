@@ -11,6 +11,7 @@ install.packages("reshape")
 install.packages("tidyverse")
 install.packages("hexbin")
 install.packages("car")
+install.packages("effectsize")
 
 #Load Data
 library(tidyverse)
@@ -77,8 +78,10 @@ hist(df_new$height)
 hist(df_new$weight)
 hist(df_new$age)
 table(df_new$smoking_status)
+
 ggplot(data=df_new, aes(x=smoking_status)) +
-  geom_bar()
+  geom_bar() +
+  theme_minimal()
 
 table(df_new$DRK_YN)
 
@@ -95,11 +98,6 @@ library(splines)   # ns()
 library(ggeffects) # Plots
 library(lmtest)
 library(reshape2)
-
-#Viewing variables
-hist(df_new$age)
-table(df_new$smoking_status)
-table(df_new$sex)
 
 #Linearity of regression
 df_new$smoking_status <- ordered(df_new$smoking_status,
@@ -119,11 +117,9 @@ df_age_smoking <- df_age_smoking %>% mutate(smoking_percent = n/sum(n)*100)
 
 ggplot(df_age_smoking, aes(x = smoking_status, y=smoking_percent, fill=sex)) +
   geom_col(position = "dodge") +
-  labs(
-    x = "Smoking status",
+  labs(x = "Smoking status",
     y = "Percent",
-    fill = "Sex"
-  ) +
+    fill = "Sex") +
   theme_minimal()
 
 #Fit linear ordinal model (standard)
@@ -149,6 +145,49 @@ nominal_test(model_spline_h1)
 summary(model_spline_h1)
 #Interpretation: Coefficients show the effect of age_con (spline) on the log-odds of being in a 
 #higher smoking category, accounting for the proportional-odds assumption.
+#Age has an effect on smoking_status
+
+#Post-Hoc Analysis of H1. Age has an effect on smoking_status but at what age does it change? 
+age_seq <- seq(from = min(df_new$age, na.rm = TRUE),
+  to   = max(df_new$age, na.rm = TRUE),
+  length.out = 100)
+
+newdata<- expand.grid(age = age_seq,
+  sex = c("Female", "Male"))
+
+newdata$age_con <- scale(newdata$age,
+  center = attr(df_new$age_con, "scaled:center"),
+  scale  = attr(df_new$age_con, "scaled:scale"))
+
+pred_probs <- predict(model_spline_h1,
+  newdata = newdata,
+  type = "prob")
+
+pred_df <- cbind(newdata, as.data.frame(pred_probs))
+
+ggplot(pred_df, aes(x = age, y = `fit.current.smoker`, color = sex)) +
+  geom_line(linewidth = 1.2) +
+  labs(x = "Age (years)",
+    y = "Predicted probability of current smoking",
+    color = "Sex") +
+  theme_minimal()
+#highest probability of currently smoking around 40. Especially in men. Increase until 40 and then decrease. 
+
+ggplot(pred_df, aes(x = age, y = `fit.former.smoker`, color = sex)) +
+  geom_line(linewidth = 1.2) +
+  labs(x = "Age (years)",
+    y = "Predicted probability of former smoker",
+    color = "Sex") +
+  theme_minimal()
+#pretty stable number of former smokers. Decline in number of former smokers around 60
+
+ggplot(pred_df, aes(x = age, y = `fit.never.smoked`, color = sex)) +
+  geom_line(linewidth = 1.2) +
+  labs(x = "Age (years)",
+    y = "Predicted probability of non smoker",
+    color = "Sex") +
+  theme_minimal()
+#increase in probability of never smokers after age 40. 
 
 
 #H2
@@ -158,7 +197,6 @@ library(hexbin)
 library(car)
 
 #Viewing variables
-hist(df_new$weight)
 mean(df_new$weight)
 H2_set <- df_new %>% group_by(smoking_status) %>% 
   summarise(mean(weight), sd(weight), mean(age))
@@ -166,7 +204,7 @@ H2_set <- df_new %>% group_by(smoking_status) %>%
 #normal distribution
 qqnorm(df_new$weight)
 qqline(df_new$weight)
-#"weight" looks normally distributed within
+#"weight" looks normally distributed within quantiles -2 and 2
 
 #check for linearity
 model_h2 <- lm(weight ~ age + sex + smoking_status, data = df_new)
@@ -197,6 +235,24 @@ vif(model_h2)
 
 #Analysis of H2
 summary(model_h2)
+library(effectsize)
+eta_squared(model_h2, partial = TRUE)
+#age and smoking_status both have significant but small effects on weight. They are probobly just
+#significant because of the huge sample size. Sex has a significant effect with an effect size of d=0.34
+
+df_smoking_weight <- df_new %>% 
+  group_by(smoking_status, sex) %>% mutate(mean_weight = mean(weight))
+
+df_smoking_weight <- df_smoking_weight %>%
+  transmute(sex, mean_weight, smoking_status)
+
+ggplot(df_smoking_weight, aes(x=smoking_status, y=mean_weight, fill=sex))+
+  geom_col(position = "dodge")+
+  labs(title = "Mean Weight by Smoking Status and Sex", 
+       x = "Smoking Status", 
+       y = "Mean Weight") +
+  theme_minimal()
+
 
 #H3
 #Pre-Analysis H3: smoking status predicts higher LDL and lower HDL. covariates: age, sex, alcohol consumption
