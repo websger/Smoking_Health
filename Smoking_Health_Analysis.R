@@ -15,6 +15,7 @@ install.packages("effectsize")
 
 #Load Data
 library(tidyverse)
+library(ggplot2)
 df <- read_csv("data_raw/smoking_driking_dataset_Ver01.csv")
 head(df)
 
@@ -147,7 +148,7 @@ summary(model_spline_h1)
 #higher smoking category, accounting for the proportional-odds assumption.
 #Age has an effect on smoking_status
 
-#Post-Hoc Analysis of H1. Age has an effect on smoking_status but at what age does it change? 
+#Visual Analysis of H1. Age has an effect on smoking_status but at what age does it change? 
 age_seq <- seq(from = min(df_new$age, na.rm = TRUE),
   to   = max(df_new$age, na.rm = TRUE),
   length.out = 100)
@@ -313,6 +314,29 @@ plot(density(rstandard(model_h3_HDL)))
 #residual distributions indicated no severe violations relevant for the MANCOVA.
 
 #Analysis of H3
+model_mancova <- manova(cbind(LDL_chole, HDL_chole) ~ smoking_status + age + sex,data = df_new)
+model_mancova
+summary(model_mancova, test = "Pillai")
+
 summary(model_h3_HDL)
 summary(model_h3_LDL)
+p_hdl <- anova(model_h3_HDL)["smoking_status", "Pr(>F)"]
+p_ldl <- anova(model_h3_LDL)["smoking_status", "Pr(>F)"]
+p.adjust(c(HDL = p_hdl, LDL = p_ldl), method = "holm")
+#smoking status has significant effects on both HDL and LDL-cholesterol
 
+#Visualization
+ggplot(data=df_new_h3, aes(x=smoking_status, y=LDL_chole, fill=sex))+
+  geom_col(position="dodge")+
+  labs(title="Effect of smoking status on LDL-cholesterol, separated by sex", 
+       x = "Smoking Status", 
+       y = "LDL cholesterol")+
+  theme_minimal()
+
+ggplot(data=df_new_h3, aes(x=smoking_status, y=HDL_chole, fill=sex))+
+  geom_col(position="dodge") +
+  labs(title="Effect of smoking status on HDL-cholesterol, separated by sex", 
+       x = "Smoking Status", 
+       y = "HDL cholesterol")+
+  theme_minimal()
+#we see a big difference between men and women in how smoking status affects HDL and LDL cholesterol
