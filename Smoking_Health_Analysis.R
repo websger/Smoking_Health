@@ -2,16 +2,7 @@
 #Set Seed
 set.seed(123)
 
-#Install packages
-install.packages("MASS")
-install.packages("ordinal")
-install.packages("ggeffects")
-install.packages("lmtest")
-install.packages("reshape")
-install.packages("tidyverse")
-install.packages("hexbin")
-install.packages("car")
-install.packages("effectsize")
+#Following packages are needed for the analysis: MASS, ordinal, ggeffects, lmtest, tidyverse, hexbin, car, effectsize
 
 #Load Data
 library(tidyverse)
@@ -43,7 +34,7 @@ str(df$smoking_status)
 #New Variable BMI
 df_new <- df %>%
   dplyr::select(sex, weight, height, age, smoking_status, LDL_chole, HDL_chole, SBP, DRK_YN) %>%
-  mutate(BMI=(weight/(height)**2)*10000) #height in m therefore multiplication with 10000
+  mutate(BMI=(weight/(height)**2)*10000) #height in cm therefore multiplication with 10000
 
 head(df_new)
 
@@ -98,7 +89,6 @@ library(ordinal)   # clm()
 library(splines)   # ns()
 library(ggeffects) # Plots
 library(lmtest)
-library(reshape2)
 
 #Linearity of regression
 df_new$smoking_status <- ordered(df_new$smoking_status,
@@ -314,7 +304,7 @@ plot(density(rstandard(model_h3_HDL)))
 #residual distributions indicated no severe violations relevant for the MANCOVA.
 
 #Analysis of H3
-model_mancova <- manova(cbind(LDL_chole, HDL_chole) ~ smoking_status + age + sex,data = df_new)
+model_mancova <- manova(cbind(LDL_chole, HDL_chole) ~ smoking_status + age + sex,data = df_new_h3)
 model_mancova
 summary(model_mancova, test = "Pillai")
 
@@ -339,4 +329,4 @@ ggplot(data=df_new_h3, aes(x=smoking_status, y=HDL_chole, fill=sex))+
        x = "Smoking Status", 
        y = "HDL cholesterol")+
   theme_minimal()
-#we see a big difference between men and women in how smoking status affects HDL and LDL cholesterol
+#explorative plots suggest a big difference between men and women in how smoking status affects HDL and LDL cholesterol
