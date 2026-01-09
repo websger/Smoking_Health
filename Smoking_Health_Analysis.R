@@ -2,7 +2,7 @@
 #Set Seed
 set.seed(123)
 
-#Following packages are needed for the analysis: MASS, ordinal, ggeffects, lmtest, tidyverse, hexbin, car, effectsize
+#Following packages are needed for the analysis: MASS, ggplot2, ordinal, ggeffects, lmtest, tidyverse, hexbin, car, effectsize
 
 #Load Data
 library(tidyverse)
