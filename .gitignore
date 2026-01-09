@@ -12,8 +12,6 @@
 data_raw/
 data_clean/
 
-# Ignore output and figures
-figures/
 
 # RStudio files
 .Rhistory
