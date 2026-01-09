@@ -108,8 +108,9 @@ df_age_smoking <- df_age_smoking %>% mutate(smoking_percent = n/sum(n)*100)
 
 ggplot(df_age_smoking, aes(x = smoking_status, y=smoking_percent, fill=sex)) +
   geom_col(position = "dodge") +
-  labs(x = "Smoking status",
-    y = "Percent",
+  labs(title ="Percentage of smoking status among men and women", 
+       x = "Smoking status",
+       y = "Percent",
     fill = "Sex") +
   theme_minimal()
 
@@ -158,7 +159,8 @@ pred_df <- cbind(newdata, as.data.frame(pred_probs))
 
 ggplot(pred_df, aes(x = age, y = `fit.current.smoker`, color = sex)) +
   geom_line(linewidth = 1.2) +
-  labs(x = "Age (years)",
+  labs(title = "Change of probability of currently smoking across lifespan", 
+       x = "Age (years)",
     y = "Predicted probability of current smoking",
     color = "Sex") +
   theme_minimal()
