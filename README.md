@@ -3,5 +3,7 @@ Smoking as a Determinant of Health: Effects on Age Trends, Body Weight, and Lipi
 
 To analyze how smoking behavior is associated with age, body weight, and lipid metabolism using Korean national health data, in order to identify physiological patterns linked to smoking.
 
+OSF-Link: https://osf.io/qn6ys/overview 
+
 
 Status: Completed
